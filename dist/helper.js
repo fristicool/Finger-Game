@@ -16,7 +16,6 @@ export function AddNumber(position, handIndex, otherPlayerHandIndex, maximazingP
     };
     if (maximazingPlayer) {
         returnPosition.minPlayer[otherPlayerHandIndex] += returnPosition.maxPlayer[handIndex];
-        // console.log(`See: change: ${returnPosition.minPlayer[otherPlayerHandIndex]}`)
         if (returnPosition.minPlayer[otherPlayerHandIndex] > 4) {
             returnPosition.minPlayer[otherPlayerHandIndex] = returnPosition.minPlayer[otherPlayerHandIndex] - 5;
         }
@@ -54,7 +53,6 @@ export function RearrangeFingers(position, firstHand, secondHand, maximazingPlay
             returnPosition.minPlayer[1] -= 5;
         }
     }
-    // console.log("rearrange : "+returnPosition)
     return returnPosition;
 }
 export function OtherPlayerIndex(playerIndex) {
@@ -106,9 +104,22 @@ export function GetAllPossiblePositions(position, maximazingPlayer) {
             break;
         }
         let rearrangedFingers = RearrangeFingers(position, totalCount - i, i, maximazingPlayer);
+        if (maximazingPlayer) {
+            if (rearrangedFingers.maxPlayer[0] == position.maxPlayer[0] || rearrangedFingers.maxPlayer[1] == position.maxPlayer[1]) {
+                let tmpCount = rearrangedFingers.maxPlayer[0];
+                rearrangedFingers.maxPlayer[0] = rearrangedFingers.maxPlayer[1];
+                rearrangedFingers.maxPlayer[1] = tmpCount;
+            }
+        }
+        else {
+            if (rearrangedFingers.minPlayer[0] == position.minPlayer[0] || rearrangedFingers.minPlayer[1] == position.minPlayer[1]) {
+                let tmpCount = rearrangedFingers.minPlayer[0];
+                rearrangedFingers.minPlayer[0] = rearrangedFingers.minPlayer[1];
+                rearrangedFingers.minPlayer[1] = tmpCount;
+            }
+        }
         positions.push(rearrangedFingers);
     }
     return positions;
 }
-// GetMoveFromId()
 //# sourceMappingURL=helper.js.map

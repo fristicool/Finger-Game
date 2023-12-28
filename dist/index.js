@@ -1,20 +1,12 @@
 import fs from 'fs';
 import { IsGameOver, EvalPosition, GetAllPossiblePositions } from './helper.js';
 import * as cliProgress from 'cli-progress';
-let you = [1, 1]; // Maximazing player
-let other = [1, 1]; // Minimazing player
-let players = [you, other];
-let positionConcept = {
-    maxPlayer: [1, 1], // Maximazing player
-    minPlayer: [1, 1] // Minimazing player
-};
-let currentPlayerIndex = 0;
+import { WinningText } from './logger.js';
+import pretty from 'pretty-time';
+import colors from "ansi-colors";
 let globalLogString = "";
+let globalDebugString = "";
 function Minimax(position, depth, alpha, beta, maximazingPlayer, maxDepth) {
-    let stepPosition = {
-        maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
-        minPlayer: [position.minPlayer[0], position.minPlayer[1]]
-    };
     // End Of Tree
     if (depth == 0 || IsGameOver(position)) {
         // Return Eval:
@@ -22,8 +14,6 @@ function Minimax(position, depth, alpha, beta, maximazingPlayer, maxDepth) {
             evaluation: EvalPosition(position),
             position: position
         };
-        // globalLogString += "\nEvaluation: " + evaluation.evaluation + " : " + IsGameOver(position) + "\n position (maxplayer): " + evaluation.position.maxPlayer + "\n position (minplayer): " + evaluation.position.minPlayer;
-        // console.log(evaluation)
         return evaluation;
     }
     // Logic if not end of the tree:
@@ -44,10 +34,6 @@ function Minimax(position, depth, alpha, beta, maximazingPlayer, maxDepth) {
             if (beta <= alpha) {
                 break;
             }
-        }
-        if (depth == maxDepth) {
-            // globalLogString += `\nBest Move: (maxplayer) ${maxPosition.maxPlayer}, (minplayer) ${maxPosition.minPlayer}`;
-            // globalLogString += "\nMove To Play !!!"
         }
         return {
             evaluation: maxEval,
@@ -71,11 +57,6 @@ function Minimax(position, depth, alpha, beta, maximazingPlayer, maxDepth) {
             if (beta <= alpha) {
                 break;
             }
-            // console.log(allPossiblePositions[i]);
-        }
-        if (depth == maxDepth) {
-            // globalLogString += `\nBest Move: (maxplayer) ${minPosition.maxPlayer}, (minplayer) ${minPosition.minPlayer}`;
-            // globalLogString += "\nMove To Play !!!"
         }
         return {
             evaluation: minEval,
@@ -83,68 +64,61 @@ function Minimax(position, depth, alpha, beta, maximazingPlayer, maxDepth) {
         };
     }
 }
-function LogState(consolePrint) {
-    let LogString = "";
-    if (consolePrint) {
-        console.log(currentPlayerIndex);
-    }
-    if (currentPlayerIndex == 0) {
-        LogString += "You";
-    }
-    else {
-        LogString += "Other";
-    }
-    LogString += "\n you: " + you[0] + " " + you[1];
-    LogString += "\n other: " + other[0] + " " + other[1];
-    if (consolePrint) {
-        console.log(LogString);
-    }
-    globalLogString += '\n' + LogString;
-}
-// console.time("minimax");
-// console.log(Minimax({
-//     maxPlayer: [1, 1],
-//     minPlayer: [1, 2]
-// }, 10, -3, 3, false, 10));
-// console.timeEnd("minimax")
-// console.log(`Adding Numbers in default position: maxplayer: ${rearrangeFingers.maxPlayer}, minplayer: ${rearrangeFingers.minPlayer}`)
 // Precalc the moves:
-// progressbar
-const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-bar.start(800, 0);
-// let depthString: any =  prompt("At What Depth Do You Want To Calculate?\n   ", "0")
+// Progressbar
+const bar = new cliProgress.SingleBar({
+    format: colors.greenBright("Training: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} | {duration}s"),
+}, cliProgress.Presets.shades_classic);
 let depth = 15;
-// depth = parseInt(depthString);
+globalDebugString += `Depth: ${depth}`;
 let positionsToTest = [];
+let arrayOfNames = [];
+console.time(colors.blue("Adding All Possibilities"));
 for (let i = 0; i < 5; i++) {
-    for (let y = 1; y < 5; y++) {
+    for (let y = 0; y < 5; y++) {
         for (let o = 0; o < 5; o++) {
-            for (let l = 1; l < 5; l++) {
+            for (let l = 0; l < 5; l++) {
                 let posToTest = {
                     maxPlayer: [i, y],
                     minPlayer: [o, l]
                 };
-                let reversedPosToTest = {
-                    maxPlayer: [y, i],
-                    minPlayer: [l, o]
-                };
-                if (posToTest != reversedPosToTest) {
-                    positionsToTest.push(posToTest);
-                    positionsToTest.push(reversedPosToTest);
-                }
-                else {
-                    positionsToTest.push(posToTest);
+                if ((i + y) != 0 && (o + l) != 0) {
+                    let compressedName = `${posToTest.maxPlayer[0]},${posToTest.maxPlayer[1]},${posToTest.minPlayer[0]},${posToTest.minPlayer[1]}`;
+                    if (!arrayOfNames.includes(compressedName)) {
+                        arrayOfNames.push(compressedName);
+                        positionsToTest.push(posToTest);
+                    }
+                    let reversedPosToTest = {
+                        maxPlayer: [y, i],
+                        minPlayer: [l, o]
+                    };
+                    compressedName = `${reversedPosToTest.maxPlayer[0]},${reversedPosToTest.maxPlayer[1]},${reversedPosToTest.minPlayer[0]},${reversedPosToTest.minPlayer[1]}`;
+                    if (!arrayOfNames.includes(compressedName)) {
+                        arrayOfNames.push(compressedName);
+                        positionsToTest.push(reversedPosToTest);
+                    }
                 }
             }
         }
     }
 }
-console.time("withlogging");
+console.timeEnd(colors.blue("Adding All Possibilities"));
+console.log(colors.red(`Depth: ${depth}\n`));
+bar.start(positionsToTest.length, 0);
+console.time(colors.blue(`\nCalculating Table`));
+let tmpDebugString = "";
+let tb = Date.now();
 for (let i = 0; i < positionsToTest.length; i++) {
     let result = Minimax(positionsToTest[i], depth, -3, 3, true, depth);
     globalLogString += `\n${positionsToTest[i].maxPlayer[0]},${positionsToTest[i].maxPlayer[1]},${positionsToTest[i].minPlayer[0]},${positionsToTest[i].minPlayer[1]}:${result.position.maxPlayer[0]},${result.position.maxPlayer[1]},${result.position.minPlayer[0]},${result.position.minPlayer[1]}`;
+    tmpDebugString += `\n${positionsToTest[i].maxPlayer[0]},${positionsToTest[i].maxPlayer[1]},${positionsToTest[i].minPlayer[0]},${positionsToTest[i].minPlayer[1]}:${result.position.maxPlayer[0]},${result.position.maxPlayer[1]},${result.position.minPlayer[0]},${result.position.minPlayer[1]} : ${result.evaluation} : ${WinningText(result.evaluation)}`;
     bar.update(i + 1);
 }
-console.timeEnd("withlogging");
-fs.writeFileSync(`./MAXIMAZINGTABLE-${depth}.txt`, globalLogString);
+let te = Date.now();
+bar.stop();
+console.timeEnd(colors.blue("\nCalculating Table"));
+globalDebugString += `\nRraining Time: ${pretty((te - tb) * 1000000, 'ms')}\n`;
+globalDebugString += tmpDebugString;
+fs.writeFileSync(`./output/tables/MAXIMAZINGTABLE-${depth}.txt`, globalLogString);
+fs.writeFileSync(`./output/debug/debug-${depth}.txt`, globalDebugString);
 //# sourceMappingURL=index.js.map
