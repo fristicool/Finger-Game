@@ -122,4 +122,76 @@ export function GetAllPossiblePositions(position, maximazingPlayer) {
     }
     return positions;
 }
+export function Minimax(position, depth, alpha, beta, maximazingPlayer, maxDepth) {
+    let stepPosition = {
+        maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
+        minPlayer: [position.minPlayer[0], position.minPlayer[1]]
+    };
+    // End Of Tree
+    if (depth == 0 || IsGameOver(position)) {
+        // Return Eval:
+        let evaluation = {
+            evaluation: EvalPosition(position),
+            position: position,
+            originalPosition: stepPosition
+        };
+        return evaluation;
+    }
+    // Logic if not end of the tree:
+    if (maximazingPlayer) {
+        let maxEval = -3;
+        let maxPosition = {
+            maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
+            minPlayer: [position.minPlayer[0], position.minPlayer[1]]
+        };
+        let allPossiblePositions = GetAllPossiblePositions(position, true);
+        for (let i = 0; i < allPossiblePositions.length; i++) {
+            let evaluation = Minimax(allPossiblePositions[i], depth - 1, alpha, beta, false, maxDepth).evaluation;
+            maxEval = Math.max(maxEval, evaluation);
+            if (maxEval == evaluation) {
+                maxPosition = allPossiblePositions[i];
+            }
+            alpha = Math.max(alpha, evaluation);
+            if (beta <= alpha) {
+                break;
+            }
+        }
+        return {
+            evaluation: maxEval,
+            position: maxPosition,
+            originalPosition: stepPosition
+        };
+    }
+    else {
+        let minEval = 3;
+        let minPosition = {
+            maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
+            minPlayer: [position.minPlayer[0], position.minPlayer[1]]
+        };
+        let allPossiblePositions = GetAllPossiblePositions(position, false);
+        for (let i = 0; i < allPossiblePositions.length; i++) {
+            let evaluation = Minimax(allPossiblePositions[i], depth - 1, alpha, beta, true, maxDepth).evaluation;
+            minEval = Math.min(minEval, evaluation);
+            if (minEval == evaluation) {
+                minPosition = allPossiblePositions[i];
+            }
+            beta = Math.min(beta, evaluation);
+            if (beta <= alpha) {
+                break;
+            }
+        }
+        return {
+            evaluation: minEval,
+            position: minPosition,
+            originalPosition: stepPosition
+        };
+    }
+}
+export function chuckify(positions, n) {
+    let chuncks = [];
+    for (let i = n; i > 0; i--) {
+        chuncks.push(positions.splice(0, Math.ceil(positions.length / i)));
+    }
+    return chuncks;
+}
 //# sourceMappingURL=helper.js.map

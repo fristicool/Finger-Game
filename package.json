@@ -15,7 +15,8 @@
     "cli-progress": "^3.12.0",
     "pretty-time": "^1.1.0",
     "prompt-sync": "^4.2.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "workerpool": "^9.0.4"
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.5",

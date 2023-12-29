@@ -1,10 +1,21 @@
 import fs from 'fs';
-import { IsGameOver, EvalPosition, GetAllPossiblePositions, AddNumber, RearrangeFingers } from './helper.js';
 import * as cliProgress from 'cli-progress';
-import { WinningText } from './logger.js';
 import pretty from 'pretty-time';
 import colors from "ansi-colors"
+import { WorkerData } from './types.js';
 
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+
+import { Worker } from 'worker_threads';
+import { chuckify } from './helper.js';
+
+import os from 'os'
+const cpuCount = os.cpus().length
 
 // Types:
 type position = {
@@ -14,90 +25,20 @@ type position = {
 
 type minmaxout = {
     evaluation: number,
-    position: position
+    position: position,
+    originalPosition: position
 }
 
 let globalLogString = "";
 let globalDebugString = "";
 
-function Minimax(position: position, depth: number, alpha: number, beta: number, maximazingPlayer: boolean, maxDepth: number) {
-
-    // End Of Tree
-    if (depth == 0 || IsGameOver(position)) {
-        // Return Eval:
-
-        let evaluation = {
-            evaluation: EvalPosition(position),
-            position: position
-        };
-        return evaluation;
-    }
-
-    // Logic if not end of the tree:
-
-    if (maximazingPlayer) {
-        let maxEval = -3;
-        let maxPosition: position = {
-            maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
-            minPlayer: [position.minPlayer[0], position.minPlayer[1]]
-        };
-
-        let allPossiblePositions: position[] = GetAllPossiblePositions(position, true);
-
-        for (let i = 0; i < allPossiblePositions.length; i++) {
-            let evaluation: number = Minimax(allPossiblePositions[i], depth - 1, alpha, beta, false, maxDepth).evaluation;
-            maxEval = Math.max(maxEval, evaluation)
-            if (maxEval == evaluation) {
-                maxPosition = allPossiblePositions[i];
-            }
-            alpha = Math.max(alpha, evaluation)
-            if (beta <= alpha) {
-                break;
-            }
-        }
-
-        return {
-            evaluation: maxEval,
-            position: maxPosition
-
-        };
-
-    } else {
-        let minEval = 3;
-        let minPosition: position = {
-            maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
-            minPlayer: [position.minPlayer[0], position.minPlayer[1]]
-        };
-
-        let allPossiblePositions: position[] = GetAllPossiblePositions(position, false);
-
-        for (let i = 0; i < allPossiblePositions.length; i++) {
-            let evaluation: number = Minimax(allPossiblePositions[i], depth - 1, alpha, beta, true, maxDepth).evaluation;
-            minEval = Math.min(minEval, evaluation)
-            if (minEval == evaluation) {
-                minPosition = allPossiblePositions[i];
-            }
-            beta = Math.min(beta, evaluation)
-            if (beta <= alpha) {
-                break;
-            }
-        }
-
-        return {
-            evaluation: minEval,
-            position: minPosition
-
-        };
-    }
-}
-
 // Precalc the moves:
 
 // Progressbar
-const bar = new cliProgress.SingleBar({
-    format: colors.greenBright("Training: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} | {duration}s"),
-    
-}, cliProgress.Presets.shades_classic)
+// const bar = new cliProgress.SingleBar({
+//     format: colors.greenBright("Training: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} | {duration}s"),
+
+// }, cliProgress.Presets.shades_classic)
 
 let depth: number = 15;
 globalDebugString += `Depth: ${depth}`
@@ -150,29 +91,58 @@ for (let i = 0; i < 5; i++) {
 console.timeEnd(colors.blue("Adding All Possibilities"));
 console.log(colors.red(`Depth: ${depth}\n`))
 
-bar.start(positionsToTest.length, 0)
+// bar.start(positionsToTest.length, 0)
 
 console.time(colors.blue(`\nCalculating Table`));
 
 let tmpDebugString = "";
+// let tb: number = Date.now();
+
+let promisses: Promise<void>[] = []
+
+let chuncks = chuckify(positionsToTest, cpuCount);
+
+for (let i = 0; i < chuncks.length; i++) {
+    promisses.push(MinimaxAsync(chuncks[i], depth))
+}
+
 let tb: number = Date.now();
 
-for (let i = 0; i < positionsToTest.length; i++) {
-    let result: minmaxout = Minimax(positionsToTest[i], depth, -3, 3, true, depth)
+await Promise.all(promisses)
 
-    globalLogString += `\n${positionsToTest[i].maxPlayer[0]},${positionsToTest[i].maxPlayer[1]},${positionsToTest[i].minPlayer[0]},${positionsToTest[i].minPlayer[1]}:${result.position.maxPlayer[0]},${result.position.maxPlayer[1]},${result.position.minPlayer[0]},${result.position.minPlayer[1]}`
-    tmpDebugString += `\n${positionsToTest[i].maxPlayer[0]},${positionsToTest[i].maxPlayer[1]},${positionsToTest[i].minPlayer[0]},${positionsToTest[i].minPlayer[1]}:${result.position.maxPlayer[0]},${result.position.maxPlayer[1]},${result.position.minPlayer[0]},${result.position.minPlayer[1]} : ${result.evaluation} : ${WinningText(result.evaluation)}`
-    bar.update(i + 1);
-}
+// bar.stop();
+
+console.timeEnd(colors.blue("\nCalculating Table"));
 
 let te: number = Date.now();
 
-bar.stop();
-console.timeEnd(colors.blue("\nCalculating Table"));
-
-globalDebugString += `\nRraining Time: ${pretty((te - tb)*1000000, 'ms')}\n`
-
+globalDebugString += `\nTraining Time: ${pretty((te - tb)*1000000, 'ms')}\n`
 globalDebugString += tmpDebugString;
+
 
 fs.writeFileSync(`./output/tables/MAXIMAZINGTABLE-${depth}.txt`, globalLogString);
 fs.writeFileSync(`./output/debug/debug-${depth}.txt`, globalDebugString);
+
+async function MinimaxAsync(positionsToTest: position[], depth: number) {
+    return new Promise<void>((resolve) => {
+
+        let workerData: WorkerData = {
+            positions: positionsToTest,
+            depth: depth
+        }
+
+        const worker = new Worker(__dirname + '/worker.js', {
+            // @ts-ignore
+            workerData: workerData
+        })
+
+        worker.on('message', (result) => {
+            tmpDebugString += result.debugString;
+            globalLogString += result.logString;
+
+            // bar.increment(positionsToTest.length);
+
+            resolve()
+        });
+    })
+}

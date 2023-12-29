@@ -87,11 +87,11 @@ export function EvalPosition(position: position) {
 
     let finalEval: number = 0;
 
-    if (position.maxPlayer[0] == 0 && position.maxPlayer[1] != 0 || position.maxPlayer[0] != 0  && position.maxPlayer[1] == 0 ) {
+    if (position.maxPlayer[0] == 0 && position.maxPlayer[1] != 0 || position.maxPlayer[0] != 0 && position.maxPlayer[1] == 0) {
         finalEval -= 1;
     }
 
-    if (position.minPlayer[0] == 0 && position.minPlayer[1] != 0 || position.minPlayer[0] != 0  && position.minPlayer[1] == 0 ) {
+    if (position.minPlayer[0] == 0 && position.minPlayer[1] != 0 || position.minPlayer[0] != 0 && position.minPlayer[1] == 0) {
         finalEval += 1;
     }
 
@@ -138,14 +138,14 @@ export function GetAllPossiblePositions(position: position, maximazingPlayer: bo
                 let tmpCount = rearrangedFingers.maxPlayer[0];
 
                 rearrangedFingers.maxPlayer[0] = rearrangedFingers.maxPlayer[1];
-                rearrangedFingers.maxPlayer[1] = tmpCount; 
+                rearrangedFingers.maxPlayer[1] = tmpCount;
             }
         } else {
             if (rearrangedFingers.minPlayer[0] == position.minPlayer[0] || rearrangedFingers.minPlayer[1] == position.minPlayer[1]) {
                 let tmpCount = rearrangedFingers.minPlayer[0];
 
                 rearrangedFingers.minPlayer[0] = rearrangedFingers.minPlayer[1];
-                rearrangedFingers.minPlayer[1] = tmpCount; 
+                rearrangedFingers.minPlayer[1] = tmpCount;
             }
         }
 
@@ -155,4 +155,91 @@ export function GetAllPossiblePositions(position: position, maximazingPlayer: bo
 
 
     return positions;
+}
+
+export function Minimax(position: position, depth: number, alpha: number, beta: number, maximazingPlayer: boolean, maxDepth: number) {
+
+    let stepPosition = {
+        maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
+        minPlayer: [position.minPlayer[0], position.minPlayer[1]]
+    }
+
+    // End Of Tree
+    if (depth == 0 || IsGameOver(position)) {
+        // Return Eval:
+
+        let evaluation = {
+            evaluation: EvalPosition(position),
+            position: position,
+            originalPosition: stepPosition
+        };
+        return evaluation;
+    }
+
+    // Logic if not end of the tree:
+
+    if (maximazingPlayer) {
+        let maxEval = -3;
+        let maxPosition: position = {
+            maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
+            minPlayer: [position.minPlayer[0], position.minPlayer[1]]
+        };
+
+        let allPossiblePositions: position[] = GetAllPossiblePositions(position, true);
+
+        for (let i = 0; i < allPossiblePositions.length; i++) {
+            let evaluation: number = Minimax(allPossiblePositions[i], depth - 1, alpha, beta, false, maxDepth).evaluation;
+            maxEval = Math.max(maxEval, evaluation)
+            if (maxEval == evaluation) {
+                maxPosition = allPossiblePositions[i];
+            }
+            alpha = Math.max(alpha, evaluation)
+            if (beta <= alpha) {
+                break;
+            }
+        }
+
+        return {
+            evaluation: maxEval,
+            position: maxPosition,
+            originalPosition: stepPosition
+        };
+
+    } else {
+        let minEval = 3;
+        let minPosition: position = {
+            maxPlayer: [position.maxPlayer[0], position.maxPlayer[1]],
+            minPlayer: [position.minPlayer[0], position.minPlayer[1]]
+        };
+
+        let allPossiblePositions: position[] = GetAllPossiblePositions(position, false);
+
+        for (let i = 0; i < allPossiblePositions.length; i++) {
+            let evaluation: number = Minimax(allPossiblePositions[i], depth - 1, alpha, beta, true, maxDepth).evaluation;
+            minEval = Math.min(minEval, evaluation)
+            if (minEval == evaluation) {
+                minPosition = allPossiblePositions[i];
+            }
+            beta = Math.min(beta, evaluation)
+            if (beta <= alpha) {
+                break;
+            }
+        }
+
+        return {
+            evaluation: minEval,
+            position: minPosition,
+            originalPosition: stepPosition
+        };
+    }
+}
+
+export function chuckify(positions: position[], n: number) {
+    let chuncks: position[][] = []
+
+    for (let i = n; i > 0; i--) {
+        chuncks.push(positions.splice(0, Math.ceil(positions.length / i)))
+    }
+
+    return chuncks;
 }
