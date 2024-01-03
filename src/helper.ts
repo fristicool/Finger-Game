@@ -133,23 +133,25 @@ export function GetAllPossiblePositions(position: position, maximazingPlayer: bo
 
         let rearrangedFingers: position = RearrangeFingers(position, totalCount - i, i, maximazingPlayer)
 
-        if (maximazingPlayer) {
-            if (rearrangedFingers.maxPlayer[0] == position.maxPlayer[0] || rearrangedFingers.maxPlayer[1] == position.maxPlayer[1]) {
-                let tmpCount = rearrangedFingers.maxPlayer[0];
+        positions.push(rearrangedFingers)
 
-                rearrangedFingers.maxPlayer[0] = rearrangedFingers.maxPlayer[1];
-                rearrangedFingers.maxPlayer[1] = tmpCount;
+        if (maximazingPlayer) {
+            if (rearrangedFingers.maxPlayer[0] == position.maxPlayer[0] && rearrangedFingers.maxPlayer[1] == position.maxPlayer[1]) {
+                positions.pop();
+            }
+            if (rearrangedFingers.maxPlayer[1] == position.maxPlayer[0] && rearrangedFingers.maxPlayer[0] == position.maxPlayer[1]) {
+                positions.pop()
             }
         } else {
-            if (rearrangedFingers.minPlayer[0] == position.minPlayer[0] || rearrangedFingers.minPlayer[1] == position.minPlayer[1]) {
-                let tmpCount = rearrangedFingers.minPlayer[0];
-
-                rearrangedFingers.minPlayer[0] = rearrangedFingers.minPlayer[1];
-                rearrangedFingers.minPlayer[1] = tmpCount;
+            if (rearrangedFingers.minPlayer[0] == position.minPlayer[0] && rearrangedFingers.minPlayer[1] == position.minPlayer[1]) {
+                positions.pop()
+            }
+            if (rearrangedFingers.minPlayer[1] == position.minPlayer[0] && rearrangedFingers.minPlayer[0] == position.minPlayer[1]) {
+                positions.pop()
             }
         }
 
-        positions.push(rearrangedFingers)
+
 
     }
 

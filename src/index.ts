@@ -35,10 +35,10 @@ let globalDebugString = "";
 // Precalc the moves:
 
 // Progressbar
-// const bar = new cliProgress.SingleBar({
-//     format: colors.greenBright("Training: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} | {duration}s"),
+const bar = new cliProgress.SingleBar({
+    format: colors.greenBright("Training: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} | {duration}s"),
 
-// }, cliProgress.Presets.shades_classic)
+}, cliProgress.Presets.shades_classic)
 
 let depth: number = 15;
 globalDebugString += `Depth: ${depth}`
@@ -91,7 +91,7 @@ for (let i = 0; i < 5; i++) {
 console.timeEnd(colors.blue("Adding All Possibilities"));
 console.log(colors.red(`Depth: ${depth}\n`))
 
-// bar.start(positionsToTest.length, 0)
+bar.start(positionsToTest.length, 0)
 
 console.time(colors.blue(`\nCalculating Table`));
 
@@ -110,13 +110,13 @@ let tb: number = Date.now();
 
 await Promise.all(promisses)
 
-// bar.stop();
+bar.stop();
 
 console.timeEnd(colors.blue("\nCalculating Table"));
 
 let te: number = Date.now();
 
-globalDebugString += `\nTraining Time: ${pretty((te - tb)*1000000, 'ms')}\n`
+globalDebugString += `\nTraining Time: ${pretty((te - tb) * 1000000, 'ms')}\n`
 globalDebugString += tmpDebugString;
 
 
@@ -137,12 +137,14 @@ async function MinimaxAsync(positionsToTest: position[], depth: number) {
         })
 
         worker.on('message', (result) => {
-            tmpDebugString += result.debugString;
-            globalLogString += result.logString;
-
-            // bar.increment(positionsToTest.length);
-
-            resolve()
+            if (result == "onedone") {
+                bar.increment(1);
+            }
+            else {
+                tmpDebugString += result.debugString;
+                globalLogString += result.logString;
+                resolve()
+            }
         });
     })
 }
